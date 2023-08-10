@@ -1,5 +1,6 @@
 from blog.models import Category, Page, Post, Tag
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 
 
@@ -43,7 +44,7 @@ class PageAdmin(SummernoteModelAdmin):
 
 
 @admin.register(Post)
-class PageAdmin(SummernoteModelAdmin):
+class PostAdmin(SummernoteModelAdmin):
     summernote_fields = ('content',)
     list_display = 'id', 'title', 'is_published',  'created_by',
     list_display_links = 'title',
@@ -52,7 +53,10 @@ class PageAdmin(SummernoteModelAdmin):
     list_filter = 'category', 'is_published',
     list_editable = 'is_published',
     ordering = '-id',
-    readonly_fields = 'created_at', 'updated_at', 'created_by', 'updated_by',
+    readonly_fields = (
+        'created_at', 'updated_at', 'created_by', 'updated_by',
+        'link',
+    )
     prepopulated_fields = {
         "slug": ('title',),
     }
@@ -64,4 +68,22 @@ class PageAdmin(SummernoteModelAdmin):
         else:
             obj.created_by = request.user  # type: ignore
 
+        obj.save()
+
+    def link(self, obj):
+        if not obj.pk:
+            return '-'
+
+        url_do_post = obj.get_absolute_url()
+        safe_link = mark_safe(
+            f'<a target="_blank" href="{url_do_post}">Ver post</a>'
+        )
+
+        return safe_link
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            obj.updated_by = request.user  # type: ignore
+        else:
+            obj.created_by = request.user  # type: ignore
         obj.save()
